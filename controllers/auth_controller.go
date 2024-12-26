@@ -1,10 +1,10 @@
 package controllers
 
 import (
-	"encoding/json"
-	"goauth/services"
-	"goauth/models"
-	"net/http"
+    "encoding/json"
+    "goauth/services"
+    "goauth/models"
+    "net/http"
 )
 
 // Login godoc
@@ -80,36 +80,36 @@ func Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func RefreshToken(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodOptions {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
+    if r.Method == http.MethodOptions {
+        w.WriteHeader(http.StatusOK)
+        return
+    }
 
-	var requestUser models.User
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&requestUser); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+    var requestUser models.User
+    decoder := json.NewDecoder(r.Body)
+    if err := decoder.Decode(&requestUser); err != nil {
+        http.Error(w, err.Error(), http.StatusBadRequest)
+        return
+    }
 
-	// Chama o serviço para gerar um novo token
-	status, token := services.RefreshToken(&requestUser)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	w.Write(token)
+    // Chama o serviço para gerar um novo token
+    status, token := services.RefreshToken(&requestUser)
+    w.Header().Set("Content-Type", "application/json")
+    w.WriteHeader(status)
+    w.Write(token)
 }
 
 func Logout(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodOptions {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
+    if r.Method == http.MethodOptions {
+        w.WriteHeader(http.StatusOK)
+        return
+    }
 
-	// Chama o serviço de logout
-	err := services.Logout(r)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-	} else {
-		w.WriteHeader(http.StatusOK)
-	}
+    // Chama o serviço de logout
+    err := services.Logout(r)
+    if err != nil {
+        w.WriteHeader(http.StatusInternalServerError)
+    } else {
+        w.WriteHeader(http.StatusOK)
+    }
 }
