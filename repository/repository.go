@@ -13,7 +13,7 @@ var db *sql.DB
 func InitDB(dataSourceName string) {
 	var err error
 	db, err = sql.Open("sqlite3", dataSourceName)
-	if err != nil {
+	if (err != nil) {
 		log.Fatal(err)
 	}
 
@@ -26,6 +26,12 @@ func InitDB(dataSourceName string) {
 	_, err = db.Exec(createTableQuery)
 	if err != nil {
 		log.Fatal(err)
+	}
+}
+
+func CloseDB() {
+	if db != nil {
+		db.Close()
 	}
 }
 
