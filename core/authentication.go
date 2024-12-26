@@ -1,18 +1,12 @@
 package auth
 
 import (
-	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
 	"errors"
-	"fmt"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // Configurações para autenticação
@@ -21,38 +15,8 @@ const (
 )
 
 var (
-	secretKey = []byte("SUA_CHAVE_SECRETA") // Use uma chave segura
-	privateKey *rsa.PrivateKey
-	publicKey  *rsa.PublicKey
+	secretKey = []byte("SUA_CHAVE_SECRETA")
 )
-
-// Inicializa o backend para autenticação com suporte a HMAC e RSA
-func InitAuthKeys(privateKeyPath, publicKeyPath string) error {
-	// Carrega a chave privada
-	privateKeyData, err := ioutil.ReadFile(privateKeyPath)
-	if err != nil {
-		return fmt.Errorf("error reading private key file: %v", err)
-	}
-	block, _ := pem.Decode(privateKeyData)
-	privateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
-	if err != nil {
-		return fmt.Errorf("error parsing private key: %v", err)
-	}
-
-	// Carrega a chave pública
-	publicKeyData, err := ioutil.ReadFile(publicKeyPath)
-	if err != nil {
-		return fmt.Errorf("error reading public key file: %v", err)
-	}
-	block, _ = pem.Decode(publicKeyData)
-	pubKey, err := x509.ParsePKIXPublicKey(block.Bytes)
-	if err != nil {
-		return fmt.Errorf("error parsing public key: %v", err)
-	}
-	publicKey = pubKey.(*rsa.PublicKey)
-
-	return nil
-}
 
 // GenerateToken cria um token JWT com HMAC ou RSA
 func GenerateToken(userUUID string) (string, error) {
@@ -109,13 +73,3 @@ func RequireTokenAuthentication(w http.ResponseWriter, r *http.Request, next htt
 	next(w, r)
 }
 
-// HashPassword gera o hash de uma senha
-func HashPassword(password string) (string, error) {
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	return string(hashedPassword), err
-}
-
-// CheckPassword compara uma senha com seu hash
-func CheckPassword(hash, password string) error {
-	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-}

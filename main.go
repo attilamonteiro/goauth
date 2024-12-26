@@ -10,7 +10,7 @@ import (
 
 	"github.com/gorilla/mux"
 	httpSwagger "github.com/swaggo/http-swagger"
-	_ "goauth/docs" // Import necessário para os documentos gerados
+	_ "goauth/docs" 
 )
 
 func main() {
