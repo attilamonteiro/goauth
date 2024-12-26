@@ -1,64 +1,60 @@
 package repository
 
 import (
-    "goauth/models"
-    "testing"
+	"goauth/config"
+	"goauth/models"
+	"testing"
 )
 
-func TestInitDB(t *testing.T) {
-    InitDB("test.db")
-    defer CloseDB()
+func TestUserRepository(t *testing.T) {
+	// Inicializa a conexão com o banco de dados
+	db := config.SetupDatabaseConnection()
+	defer config.CloseDatabaseConnection(db)
 
-    if db == nil {
-        t.Fatal("Expected db to be initialized, got nil")
-    }
+	// Inicializa o repositório
+	userRepo := NewUserRepository(db)
+
+	// Cria um usuário de teste
+	testUser := &models.User{
+		Username: "testuser",
+		Password: "testpassword",
+	}
+	err := userRepo.CreateUser(testUser)
+	if err != nil {
+		t.Fatalf("Failed to create user: %v", err)
+	}
+
+	// Testa busca por nome de usuário
+	user, err := userRepo.FindByUsername(testUser.Username)
+	if err != nil {
+		t.Fatalf("Failed to find user: %v", err)
+	}
+	if user.Username != testUser.Username {
+		t.Errorf("Expected username %s, got %s", testUser.Username, user.Username)
+	}
 }
 
-func TestFindByUsername(t *testing.T) {
-    InitDB("test.db")
-    defer CloseDB()
+func TestUserRepositoryDuplicate(t *testing.T) {
+	// Inicializa a conexão com o banco de dados
+	db := config.SetupDatabaseConnection()
+	defer config.CloseDatabaseConnection(db)
 
-    // Create a test user
-    testUser := &models.User{
-        UUID:     "test-uuid",
-        Username: "testuser",
-        Password: "testpassword",
-    }
-    err := CreateUser(testUser)
-    if err != nil {
-        t.Fatalf("Failed to create user: %v", err)
-    }
+	// Inicializa o repositório
+	userRepo := NewUserRepository(db)
 
-    // Test finding the user by username
-    user, err := FindByUsername(testUser.Username)
-    if err != nil {
-        t.Fatalf("Failed to find user: %v", err)
-    }
-    if user.Username != testUser.Username {
-        t.Errorf("Expected username %s, got %s", testUser.Username, user.Username)
-    }
-}
+	// Cria um usuário de teste
+	testUser := &models.User{
+		Username: "testuser",
+		Password: "testpassword",
+	}
+	err := userRepo.CreateUser(testUser)
+	if err != nil {
+		t.Fatalf("Failed to create user: %v", err)
+	}
 
-func TestCreateUser(t *testing.T) {
-    InitDB("test.db")
-    defer CloseDB()
-
-    // Create a test user
-    testUser := &models.User{
-        UUID:     "test-uuid",
-        Username: "newuser",
-        Password: "newpassword",
-    }
-
-    // Test creating the user
-    err := CreateUser(testUser)
-    if err != nil {
-        t.Fatalf("Failed to create user: %v", err)
-    }
-
-    // Test creating the user with the same username
-    err = CreateUser(testUser)
-    if err == nil {
-        t.Fatal("Expected error, got nil")
-    }
+	// Tenta criar o mesmo usuário novamente
+	err = userRepo.CreateUser(testUser)
+	if err == nil {
+		t.Fatalf("Expected error when creating duplicate user, got nil")
+	}
 }

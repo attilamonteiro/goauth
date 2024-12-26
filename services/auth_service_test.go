@@ -1,77 +1,90 @@
 package services
 
 import (
+	"goauth/config"
 	"goauth/models"
 	"goauth/repository"
 	"testing"
 )
 
 func TestLogin(t *testing.T) {
-	repository.InitDB("test.db")
-	defer repository.CloseDB()
+	// Inicializa a conexão com o banco de dados
+	db := config.SetupDatabaseConnection()
+	defer config.CloseDatabaseConnection(db)
 
-	// Create a test user
+	// Inicializa o repositório
+	userRepo := repository.NewUserRepository(db)
+
+	// Cria um usuário de teste
 	testUser := &models.User{
 		Username: "testuser",
 		Password: "testpassword",
 	}
-	err := registerUser(testUser.Username, testUser.Password)
+	err := userRepo.CreateUser(testUser)
 	if err != nil {
 		t.Fatalf("Failed to register user: %v", err)
 	}
 
-	// Test login with correct credentials
-	status, _ := Login(testUser)
+	// Testa login com credenciais corretas
+	status, _ := Login(userRepo, testUser)
 	if status != 200 {
 		t.Errorf("Expected status 200, got %d", status)
 	}
 
-	// Test login with incorrect credentials
+	// Testa login com credenciais incorretas
 	testUser.Password = "wrongpassword"
-	status, _ = Login(testUser)
+	status, _ = Login(userRepo, testUser)
 	if status != 401 {
 		t.Errorf("Expected status 401, got %d", status)
 	}
 }
 
 func TestRegister(t *testing.T) {
-	repository.InitDB("test.db")
-	defer repository.CloseDB()
+	// Inicializa a conexão com o banco de dados
+	db := config.SetupDatabaseConnection()
+	defer config.CloseDatabaseConnection(db)
 
-	// Create a test user
+	// Inicializa o repositório
+	userRepo := repository.NewUserRepository(db)
+
+	// Cria um usuário de teste
 	testUser := &models.User{
 		Username: "newuser",
 		Password: "newpassword",
 	}
 
-	// Test registration
-	status, _ := Register(testUser)
+	// Testa registro de usuário
+	status, _ := Register(userRepo, testUser)
 	if status != 200 {
 		t.Errorf("Expected status 200, got %d", status)
 	}
 
-	// Test registration with existing username
-	status, _ = Register(testUser)
+	// Testa registro com nome de usuário existente
+	status, _ = Register(userRepo, testUser)
 	if status != 500 {
 		t.Errorf("Expected status 500, got %d", status)
 	}
 }
 
 func TestRefreshToken(t *testing.T) {
-	repository.InitDB("test.db")
-	defer repository.CloseDB()
+	// Inicializa a conexão com o banco de dados
+	db := config.SetupDatabaseConnection()
+	defer config.CloseDatabaseConnection(db)
 
-	// Create a test user
+	// Inicializa o repositório
+	userRepo := repository.NewUserRepository(db)
+
+	// Cria um usuário de teste
 	testUser := &models.User{
 		Username: "testuser",
 		Password: "testpassword",
 	}
-	err := registerUser(testUser.Username, testUser.Password)
+	err := userRepo.CreateUser(testUser)
 	if err != nil {
 		t.Fatalf("Failed to register user: %v", err)
 	}
 
-	// Test refresh token
+	// Testa refresh token
 	status, _ := RefreshToken(testUser)
 	if status != 200 {
 		t.Errorf("Expected status 200, got %d", status)
@@ -79,7 +92,7 @@ func TestRefreshToken(t *testing.T) {
 }
 
 func TestLogout(t *testing.T) {
-	// Test logout (currently a stub)
+	// Testa logout (atualmente um stub)
 	err := Logout(nil)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)

@@ -8,7 +8,7 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gin-gonic/gin v1.10.0
 	github.com/golang-jwt/jwt/v4 v4.5.1
-	github.com/gorilla/mux v1.8.0
+	github.com/gorilla/mux v1.8.1
 	github.com/swaggo/http-swagger v1.3.4 // Adicionado
 	github.com/swaggo/swag v1.16.4 // Adicionado
 	golang.org/x/crypto v0.31.0

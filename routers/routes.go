@@ -1,30 +1,36 @@
 package routers
 
 import (
-	"net/http"
-
-	"github.com/gorilla/mux"
 	"github.com/codegangsta/negroni"
+	"github.com/gorilla/mux"
 	"goauth/controllers"
+	"goauth/repository"
+	"net/http"
 	"goauth/core"
 )
 
-func SetAuthenticationRoutes(router *mux.Router) *mux.Router {
-	router.HandleFunc("/login", controllers.Login).Methods("POST")
-	router.HandleFunc("/register", controllers.Register).Methods("POST")
+func SetAuthenticationRoutes(router *mux.Router, userRepo repository.UserRepository) {
+	router.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+		controllers.Login(w, r, userRepo) // Passa o repositório aqui
+	}).Methods("POST")
 
-	// Ajuste 1: Utilizar negroni.Wrap para funções padrão (http.HandlerFunc)
+	router.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
+		controllers.Register(w, r, userRepo) // Passa o repositório aqui
+	}).Methods("POST")
+
 	router.Handle("/refresh-token",
 		negroni.New(
-			negroni.HandlerFunc(core.RequireTokenAuthentication),
-			negroni.Wrap(http.HandlerFunc(controllers.RefreshToken)),
+			negroni.HandlerFunc(auth.RequireTokenAuthentication),
+			negroni.Wrap(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				controllers.RefreshToken(w, r, userRepo) // Passa o repositório aqui
+			})),
 		)).Methods("GET")
 
 	router.Handle("/logout",
 		negroni.New(
-			negroni.HandlerFunc(core.RequireTokenAuthentication),
-			negroni.Wrap(http.HandlerFunc(controllers.Logout)),
+			negroni.HandlerFunc(auth.RequireTokenAuthentication),
+			negroni.Wrap(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				controllers.Logout(w, r, userRepo) // Passa o repositório aqui
+			})),
 		)).Methods("POST")
-
-	return router
 }

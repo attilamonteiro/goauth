@@ -1,115 +1,105 @@
 package controllers
 
 import (
-    "encoding/json"
-    "goauth/services"
-    "goauth/models"
-    "net/http"
+	"encoding/json"
+	"goauth/models"
+	"goauth/repository"
+	"goauth/services"
+	"net/http"
 )
 
-// Login godoc
-// @Summary Login user
-// @Description Authenticate user and return JWT token
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param user body models.User true "User credentials"
-// @Success 200 {object} map[string]string
-// @Failure 400 {string} string "Bad Request"
-// @Failure 401 {string} string "Unauthorized"
-// @Router /login [post]
-func Login(w http.ResponseWriter, r *http.Request) {
-    if r.Method == http.MethodOptions {
-        w.WriteHeader(http.StatusOK)
-        return
-    }
-
-    var requestUser models.User
-    decoder := json.NewDecoder(r.Body)
-    if err := decoder.Decode(&requestUser); err != nil {
-        http.Error(w, err.Error(), http.StatusBadRequest)
-        return
-    }
-
-    // Verifica se é um login mockado
-    if requestUser.Username == "mockuser" && requestUser.Password == "mockpassword" {
-        mockToken := map[string]string{"token": "mocked_jwt_token"}
-        responseData, _ := json.Marshal(mockToken)
-        w.Header().Set("Content-Type", "application/json")
-        w.WriteHeader(http.StatusOK)
-        w.Write(responseData)
-        return
-    }
-
-    // Chama o serviço de login
-    status, token := services.Login(&requestUser)
-    w.Header().Set("Content-Type", "application/json")
-    w.WriteHeader(status)
-    w.Write(token)
+// respondJSON envia a resposta JSON padronizada
+func respondJSON(w http.ResponseWriter, status int, payload interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if payload != nil {
+		json.NewEncoder(w).Encode(payload)
+	}
 }
 
-// Register godoc
-// @Summary Register user
-// @Description Create a new user
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param user body models.User true "New user data"
-// @Success 200 {object} map[string]string
-// @Failure 400 {string} string "Bad Request"
-// @Failure 500 {string} string "Internal Server Error"
-// @Router /register [post]
-func Register(w http.ResponseWriter, r *http.Request) {
-    if r.Method == http.MethodOptions {
-        w.WriteHeader(http.StatusOK)
-        return
-    }
-
-    var newUser models.User
-    decoder := json.NewDecoder(r.Body)
-    if err := decoder.Decode(&newUser); err != nil {
-        http.Error(w, err.Error(), http.StatusBadRequest)
-        return
-    }
-
-    // Chama o serviço de registro
-    status, response := services.Register(&newUser)
-    w.Header().Set("Content-Type", "application/json")
-    w.WriteHeader(status)
-    w.Write(response)
+// respondError envia uma resposta de erro padronizada
+func respondError(w http.ResponseWriter, status int, message string) {
+	respondJSON(w, status, map[string]string{"error": message})
 }
 
-func RefreshToken(w http.ResponseWriter, r *http.Request) {
-    if r.Method == http.MethodOptions {
-        w.WriteHeader(http.StatusOK)
-        return
-    }
+// Login autentica um usuário e retorna um token JWT.
+func Login(w http.ResponseWriter, r *http.Request, userRepo repository.UserRepository) {
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 
-    var requestUser models.User
-    decoder := json.NewDecoder(r.Body)
-    if err := decoder.Decode(&requestUser); err != nil {
-        http.Error(w, err.Error(), http.StatusBadRequest)
-        return
-    }
+	var requestUser models.User
+	if err := json.NewDecoder(r.Body).Decode(&requestUser); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
 
-    // Chama o serviço para gerar um novo token
-    status, token := services.RefreshToken(&requestUser)
-    w.Header().Set("Content-Type", "application/json")
-    w.WriteHeader(status)
-    w.Write(token)
+	// Chamar o serviço de autenticação
+	status, response := services.Login(userRepo, &requestUser)
+
+	// Responder ao cliente
+	if status == http.StatusUnauthorized {
+		respondError(w, status, "Invalid username or password")
+		return
+	}
+	respondJSON(w, status, response)
 }
 
-func Logout(w http.ResponseWriter, r *http.Request) {
-    if r.Method == http.MethodOptions {
-        w.WriteHeader(http.StatusOK)
-        return
-    }
+// Register registra um novo usuário no sistema.
+func Register(w http.ResponseWriter, r *http.Request, userRepo repository.UserRepository) {
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 
-    // Chama o serviço de logout
-    err := services.Logout(r)
-    if err != nil {
-        w.WriteHeader(http.StatusInternalServerError)
-    } else {
-        w.WriteHeader(http.StatusOK)
-    }
+	var newUser models.User
+	if err := json.NewDecoder(r.Body).Decode(&newUser); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	// Chamar o serviço de registro
+	status, response := services.Register(userRepo, &newUser)
+
+	// Responder ao cliente
+	if status == http.StatusConflict {
+		respondError(w, status, "Username already exists")
+		return
+	}
+	respondJSON(w, status, response)
+}
+
+// RefreshToken gera um novo token JWT para o usuário autenticado.
+func RefreshToken(w http.ResponseWriter, r *http.Request, userRepo repository.UserRepository) {
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	var requestUser models.User
+	if err := json.NewDecoder(r.Body).Decode(&requestUser); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	// Chamar o serviço de refresh token
+	status, response := services.RefreshToken(&requestUser)
+	respondJSON(w, status, response)
+}
+
+// Logout realiza o logout do usuário.
+func Logout(w http.ResponseWriter, r *http.Request, userRepo repository.UserRepository) {
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// Chamar o serviço de logout
+	if err := services.Logout(r); err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to logout")
+		return
+	}
+
+	respondJSON(w, http.StatusOK, map[string]string{"message": "Logged out successfully"})
 }
